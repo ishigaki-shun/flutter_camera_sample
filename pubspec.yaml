@@ -6,7 +6,6 @@ dependencies:
     sdk: flutter
 
   camera: "^0.2.1"
-  video_player: "^0.6.4"
   path_provider: "0.3.0"
 
 dev_dependencies:
