@@ -143,9 +143,7 @@ class _MyHomePageState extends State<MyHomePage> {
               new Icon(getCameraLensIcon(cameraDescription.lensDirection)),
               groupValue: controller?.description,
               value: cameraDescription,
-              onChanged: controller != null
-                  ? null
-                  : onNewCameraSelected,
+              onChanged: onNewCameraSelected,
             ),
           ),
         );
