@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:image_picker_saver/image_picker_saver.dart';
+import 'package:simple_permissions/simple_permissions.dart';
 
 List<CameraDescription> cameras;
 
@@ -11,6 +13,7 @@ List<CameraDescription> cameras;
 Future<Null> main() async {
   try {
     cameras = await availableCameras();
+    await requestPermission();
   } on CameraException catch (e) {}
 
   runApp(new MyApp());
@@ -193,10 +196,18 @@ class _MyHomePageState extends State<MyHomePage> {
       return null;
     }
 
-    final Directory extDir = await getApplicationDocumentsDirectory();
-    final String dirPath = '${extDir.path}/Pictures/flutter_test';
-    await new Directory(dirPath).create(recursive: true);
-    final String filePath = '$dirPath/${timestamp()}.jpg';
+    Directory dir;
+    if (Platform.isAndroid) {
+      dir = await getExternalStorageDirectory(); // 外部ストレージに保存
+    } else if (Platform.isIOS) {
+      dir = await getTemporaryDirectory(); // 一時ディレクトリに保存
+    } else {
+      return null;
+    }
+
+    final String dirPath = '${dir.path}/Pictures/flutter_test';
+    await Directory(dirPath).create(recursive: true);
+    String filePath = '$dirPath/${timestamp()}.jpg';
 
     if (controller.value.isTakingPicture) {
       return null;
@@ -206,6 +217,13 @@ class _MyHomePageState extends State<MyHomePage> {
       await controller.takePicture(filePath);
     } on CameraException catch (e) {
       return null;
+    }
+
+    if (Platform.isIOS) {
+      String tmpPath = filePath;
+      var savedFile = File.fromUri(Uri.file(tmpPath));
+      filePath = await ImagePickerSaver.saveFile(
+          fileData: savedFile.readAsBytesSync());
     }
 
     return filePath;
@@ -223,4 +241,15 @@ IconData getCameraLensIcon(CameraLensDirection direction) {
       return Icons.camera;
   }
   throw new ArgumentError('Unknown lens direction');
+}
+
+requestPermission() async {
+  // パーミッションの確認・要求
+  if (Platform.isAndroid &&
+      !await SimplePermissions.checkPermission(Permission.WriteExternalStorage)) {
+    SimplePermissions.requestPermission(Permission.WriteExternalStorage);
+  } else if (Platform.isIOS &&
+      !await SimplePermissions.checkPermission(Permission.PhotoLibrary)) {
+    SimplePermissions.requestPermission(Permission.PhotoLibrary);
+  }
 }
